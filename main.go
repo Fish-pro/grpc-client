@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"github.com/Fish-pro/grpc-client/helper"
 	"github.com/Fish-pro/grpc-client/services"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc"
 	"log"
 	"os"
-	"time"
 )
 
 func main() {
@@ -53,21 +51,93 @@ func main() {
 	//}
 	//fmt.Println(response.Prodres)
 
-	orderClient := services.NewOrderServiceClient(conn) // 新建订单服务客户端
+	//orderClient := services.NewOrderServiceClient(conn) // 新建订单服务客户端
+	//
+	//// 新建订单
+	//t := timestamp.Timestamp{Seconds: time.Now().Unix()}
+	//order := services.OrderMain{
+	//	OrderId:    1,
+	//	OrderMoney: 20.5,
+	//	OrderNo:    "23423423",
+	//	OrderTime:  &t,
+	//}
+	//response, err := orderClient.NewOrder(context.Background(), &order)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	os.Exit(1)
+	//}
+	//fmt.Println(response)
 
-	// 新建订单
-	t := timestamp.Timestamp{Seconds: time.Now().Unix()}
-	order := services.OrderMain{
-		OrderId:    1,
-		OrderMoney: 20.5,
-		OrderNo:    "23423423",
-		OrderTime:  &t,
-	}
-	response, err := orderClient.NewOrder(context.Background(), &order)
+	userClient := services.NewUserServiceClient(conn)
+
+	// 普通方法获取
+	//var i int32
+	//req := services.UserScoreRequest{}
+	//req.Users = make([]*services.UserInfo, 0)
+	//
+	//for i = 1; i < 6; i++ {
+	//	req.Users = append(req.Users, &services.UserInfo{UserId: i})
+	//}
+	//
+	//response, err := userClient.GetUserScore(context.Background(), &req)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	os.Exit(1)
+	//}
+	//fmt.Println(response.Users)
+
+	// 服务端流式
+	//var i int32
+	//req := services.UserScoreRequest{}
+	//req.Users = make([]*services.UserInfo, 0)
+	//
+	//for i = 1; i < 6; i++ {
+	//	req.Users = append(req.Users, &services.UserInfo{UserId: i})
+	//}
+	//
+	//stream, err := userClient.GetUserScoreByServerStream(context.Background(), &req)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	os.Exit(1)
+	//}
+	//
+	//for {
+	//	res, err := stream.Recv()
+	//	if err == io.EOF {
+	//		break
+	//	}
+	//	if err != nil {
+	//		log.Println(err.Error())
+	//		os.Exit(1)
+	//	}
+	//	fmt.Println(res.Users)
+	//}
+
+	// 客户端流式
+	var i int32
+
+	stream, err := userClient.GetUserScoreByClientStream(context.Background())
 	if err != nil {
 		log.Println(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println(response)
 
+	for j := 1; j <= 3; j++ {
+		req := services.UserScoreRequest{}
+		req.Users = make([]*services.UserInfo, 0)
+		for i = 1; i < 6; i++ {
+			req.Users = append(req.Users, &services.UserInfo{UserId: i})
+		}
+		err = stream.Send(&req)
+		if err != nil {
+			log.Println(err.Error())
+			os.Exit(1)
+		}
+	}
+	response, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+	fmt.Println(response.Users)
 }
