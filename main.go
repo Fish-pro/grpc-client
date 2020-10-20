@@ -6,6 +6,7 @@ import (
 	"github.com/Fish-pro/grpc-client/helper"
 	"github.com/Fish-pro/grpc-client/services"
 	"google.golang.org/grpc"
+	"io"
 	"log"
 	"os"
 )
@@ -114,30 +115,62 @@ func main() {
 	//}
 
 	// 客户端流式
-	var i int32
+	//var i int32
+	//
+	//stream, err := userClient.GetUserScoreByClientStream(context.Background())
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	os.Exit(1)
+	//}
+	//
+	//for j := 1; j <= 3; j++ {
+	//	req := services.UserScoreRequest{}
+	//	req.Users = make([]*services.UserInfo, 0)
+	//	for i = 1; i < 6; i++ {
+	//		req.Users = append(req.Users, &services.UserInfo{UserId: i})
+	//	}
+	//	err = stream.Send(&req)
+	//	if err != nil {
+	//		log.Println(err.Error())
+	//		os.Exit(1)
+	//	}
+	//}
+	//response, err := stream.CloseAndRecv()
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	os.Exit(1)
+	//}
+	//fmt.Println(response.Users)
 
-	stream, err := userClient.GetUserScoreByClientStream(context.Background())
+	// 双向流式
+	stream, err := userClient.GetUserScoreByTWS(context.Background())
 	if err != nil {
 		log.Println(err.Error())
 		os.Exit(1)
 	}
 
+	var uid int32 = 1
 	for j := 1; j <= 3; j++ {
 		req := services.UserScoreRequest{}
 		req.Users = make([]*services.UserInfo, 0)
-		for i = 1; i < 6; i++ {
-			req.Users = append(req.Users, &services.UserInfo{UserId: i})
+		for i := 1; i < 6; i++ {
+			req.Users = append(req.Users, &services.UserInfo{UserId: uid})
+			uid++
 		}
 		err = stream.Send(&req)
 		if err != nil {
 			log.Println(err.Error())
 			os.Exit(1)
 		}
+
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Println(err.Error())
+		}
+		fmt.Println(res.Users)
 	}
-	response, err := stream.CloseAndRecv()
-	if err != nil {
-		log.Println(err.Error())
-		os.Exit(1)
-	}
-	fmt.Println(response.Users)
+
 }
